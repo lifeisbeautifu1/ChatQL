@@ -8,10 +8,11 @@ const typeDefs = gql`
     created_at: String!
     updated_at: String!
     image_url: String
-    password: String!
+    token: String
   }
   type Query {
     getUsers: [User]!
+    login(username: String!, password: String!): User!
   }
   type Mutation {
     register(

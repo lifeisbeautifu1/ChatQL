@@ -1,6 +1,6 @@
 import 'colors';
 import 'dotenv/config';
-import { ApolloServer, gql } from 'apollo-server';
+import { ApolloServer } from 'apollo-server';
 
 import typeDefs from './graphql/typeDefs';
 import resolvers from './graphql/resolvers';
@@ -12,8 +12,9 @@ const PORT = process.env.PORT || 5000;
 const server = new ApolloServer({
   typeDefs,
   resolvers,
-  context: () => {
+  context: ({ req }) => {
     return {
+      req,
       db: {
         query,
       },

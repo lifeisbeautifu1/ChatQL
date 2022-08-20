@@ -1,13 +1,59 @@
 import bcrypt from 'bcryptjs';
-
-import { AppContext, RegisterInput } from '../interfaces';
-import { validateRegisterInput } from '../config/validation';
+import jwt from 'jsonwebtoken';
 import { UserInputError } from 'apollo-server';
+
+import { AppContext, RegisterInput, LoginInput } from '../interfaces';
+import {
+  validateRegisterInput,
+  validateLoginInput,
+} from '../config/validation';
+import { auth } from '../config/auth';
 
 const resolvers = {
   Query: {
     getUsers: async (parent: undefined, args: null, context: AppContext) => {
-      return (await context.db.query('SELECT * FROM users;', [])).rows;
+      const user: any = auth(context);
+      return (
+        await context.db.query('SELECT * FROM users WHERE username != $1', [
+          user.username,
+        ])
+      ).rows;
+    },
+    login: async (parent: undefined, args: LoginInput, context: AppContext) => {
+      const { username, password } = args;
+      try {
+        const { errors } = validateLoginInput(username, password);
+        if (Object.keys(errors).length > 0) throw errors;
+
+        const user = await context.db.query(
+          'SELECT * FROM users WHERE username = $1',
+          [username]
+        );
+        if (!user.rows[0]) {
+          errors.username = 'User not found!';
+        }
+        if (Object.keys(errors).length > 0) throw errors;
+
+        const match = await bcrypt.compare(password, user.rows[0].password);
+
+        if (!match) {
+          errors.password = 'Password is incorrect';
+        }
+        if (Object.keys(errors).length > 0) throw errors;
+
+        const token = jwt.sign({ username }, process.env.JWT_SECRET as string, {
+          expiresIn: '7d',
+        });
+
+        return {
+          ...user.rows[0],
+          token,
+        };
+      } catch (errors) {
+        throw new UserInputError('Bad Input', {
+          errors,
+        });
+      }
     },
   },
   Mutation: {
@@ -52,7 +98,14 @@ const resolvers = {
           [username, email, password]
         );
 
-        return user.rows[0];
+        const token = jwt.sign({ username }, process.env.JWT_SECRET as string, {
+          expiresIn: '7d',
+        });
+
+        return {
+          ...user.rows[0],
+          token,
+        };
       } catch (errors) {
         throw new UserInputError('Bad Input', {
           errors,
