@@ -1,21 +1,11 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { useMutation } from '@apollo/client';
+import { useLazyQuery } from '@apollo/client';
 import { gql } from '@apollo/client';
 
-export const REGISTER_USER = gql`
-  mutation register(
-    $username: String!
-    $email: String!
-    $password: String!
-    $confirmPassword: String!
-  ) {
-    register(
-      username: $username
-      email: $email
-      password: $password
-      confirmPassword: $confirmPassword
-    ) {
+export const LOGIN_USER = gql`
+  query login($username: String!, $password: String!) {
+    login(username: $username, password: $password) {
       username
       email
       id
@@ -29,15 +19,14 @@ const Register = () => {
 
   const [formState, setFormState] = useState({
     username: '',
-    email: '',
     password: '',
-    confirmPassword: '',
   });
   const [errors, setErrors] = useState<any>({});
 
-  const [registerUser] = useMutation(REGISTER_USER, {
-    onCompleted: () => {
-      navigate('/login');
+  const [login] = useLazyQuery(LOGIN_USER, {
+    onCompleted: (data) => {
+      localStorage.setItem('token', data?.login?.token);
+      navigate('/');
     },
     onError: (err: any) => {
       setErrors(err.graphQLErrors[0].extensions.errors);
@@ -47,7 +36,7 @@ const Register = () => {
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    registerUser();
+    login();
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -56,7 +45,6 @@ const Register = () => {
       [e.target.name]: e.target.value,
     });
   };
-
   return (
     <div className="flex bg-white">
       <div
@@ -65,21 +53,8 @@ const Register = () => {
       ></div>
       <div className="flex flex-col justify-center pl-6">
         <div className="w-[18rem]">
-          <h1 className="mb-2 text-lg font-medium">Sign Up</h1>
+          <h1 className="mb-2 text-lg font-medium">Login</h1>
           <form onSubmit={handleSubmit}>
-            <div className="mb-2">
-              <input
-                type="text"
-                className={`w-full p-2 transition duration-200 border border-gray-300 rounded outline-none bg-gray-50 focus:bg-white hover:bg-white ${
-                  errors.email && 'border-red-500'
-                }`}
-                onChange={handleChange}
-                value={formState.email}
-                name="email"
-                placeholder="Email"
-              />
-              <small className="text-red-600 font-medim">{errors.email}</small>
-            </div>
             <div className="mb-2">
               <input
                 type="text"
@@ -110,32 +85,18 @@ const Register = () => {
                 {errors.password}
               </small>
             </div>
-            <div className="mb-2">
-              <input
-                type="password"
-                className={`w-full p-2 transition duration-200 border border-gray-300 rounded outline-none bg-gray-50 focus:bg-white hover:bg-white ${
-                  errors.confirmPassword && 'border-red-500'
-                }`}
-                onChange={handleChange}
-                value={formState.confirmPassword}
-                name="confirmPassword"
-                placeholder="Password again"
-              />
-              <small className="text-red-600 font-medim">
-                {errors.confirmPassword}
-              </small>
-            </div>
+
             <button
               type="submit"
               className="w-full py-2 mb-4 text-sm font-bold text-white uppercase transition duration-200 bg-blue-500 border border-blue-500 rounded hover:bg-blue-500/90"
             >
-              Sign Up
+              Login
             </button>
           </form>
           <small>
-            Have an account?
-            <Link to="/login" className="ml-1 text-blue-500">
-              Login
+            Don't have an account?
+            <Link to="/register" className="ml-1 text-blue-500">
+              Sign Up
             </Link>
           </small>
         </div>

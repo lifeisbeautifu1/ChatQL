@@ -2,7 +2,13 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { UserInputError } from 'apollo-server';
 
-import { AppContext, RegisterInput, LoginInput } from '../interfaces';
+import {
+  AppContext,
+  RegisterInput,
+  LoginInput,
+  GetMessagesInput,
+  SendMessageInput,
+} from '../interfaces';
 import {
   validateRegisterInput,
   validateLoginInput,
@@ -18,6 +24,29 @@ const resolvers = {
           user.username,
         ])
       ).rows;
+    },
+    getMessages: async (
+      parent: undefined,
+      args: GetMessagesInput,
+      context: AppContext
+    ) => {
+      const { username }: any = auth(context);
+
+      const otherUser = await context.db.query(
+        'SELECT * FROM users WHERE username = $1;',
+        [args.to]
+      );
+
+      if (!otherUser.rows[0]) {
+        throw new UserInputError('User not found');
+      }
+
+      const messages = await context.db.query(
+        'SELECT * FROM messages WHERE from_user IN ($1, $2) AND to_user IN ($1, $2);',
+        [username, args.to]
+      );
+
+      return messages.rows;
     },
     login: async (parent: undefined, args: LoginInput, context: AppContext) => {
       const { username, password } = args;
@@ -57,6 +86,27 @@ const resolvers = {
     },
   },
   Mutation: {
+    sendMessage: async (
+      parent: undefined,
+      args: SendMessageInput,
+      context: AppContext
+    ) => {
+      const user: any = auth(context);
+      const otherUser = await context.db.query(
+        'SELECT * FROM users WHERE username = $1',
+        [args.to]
+      );
+      if (!otherUser.rows[0]) {
+        throw new UserInputError('User not found');
+      } else if (user.username === args.to) {
+        throw new UserInputError(`You can't send message to yourself`);
+      }
+      const message = await context.db.query(
+        'INSERT INTO messages (content, from_user, to_user) VALUES ($1, $2, $3) returning *;',
+        [args.content, user.username, args.to]
+      );
+      return message.rows[0];
+    },
     register: async (
       parent: undefined,
       args: RegisterInput,

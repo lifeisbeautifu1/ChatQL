@@ -18,3 +18,12 @@ export interface LoginInput {
   username: string;
   password: string;
 }
+
+export interface GetMessagesInput {
+  to: string;
+}
+
+export interface SendMessageInput {
+  content: string;
+  to: string;
+}
