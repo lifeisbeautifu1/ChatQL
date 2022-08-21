@@ -3,6 +3,9 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useLazyQuery } from '@apollo/client';
 import { gql } from '@apollo/client';
 
+
+import { useAuthDispatch } from '../context';
+
 export const LOGIN_USER = gql`
   query login($username: String!, $password: String!) {
     login(username: $username, password: $password) {
@@ -16,6 +19,7 @@ export const LOGIN_USER = gql`
 
 const Register = () => {
   const navigate = useNavigate();
+  const dispatch = useAuthDispatch();
 
   const [formState, setFormState] = useState({
     username: '',
@@ -25,18 +29,18 @@ const Register = () => {
 
   const [login] = useLazyQuery(LOGIN_USER, {
     onCompleted: (data) => {
-      localStorage.setItem('token', data?.login?.token);
+      dispatch({ type: 'LOGIN', payload: data.login });
       navigate('/');
     },
     onError: (err: any) => {
+      console.log(err);
       setErrors(err.graphQLErrors[0].extensions.errors);
     },
-    variables: formState,
   });
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    login();
+    login({ variables: formState });
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -56,34 +60,69 @@ const Register = () => {
           <h1 className="mb-2 text-lg font-medium">Login</h1>
           <form onSubmit={handleSubmit}>
             <div className="mb-2">
-              <input
-                type="text"
-                className={`w-full p-2 transition duration-200 border border-gray-300 rounded outline-none bg-gray-50 focus:bg-white hover:bg-white ${
-                  errors.username && 'border-red-500'
-                }`}
-                onChange={handleChange}
-                value={formState.username}
-                name="username"
-                placeholder="Username"
-              />
-              <small className="text-red-600 font-medim">
-                {errors.username}
-              </small>
+              <div className="relative">
+                <input
+                  type="text"
+                  value={formState.username}
+                  onChange={handleChange}
+                  name="username"
+                  id="username"
+                  className={`block px-2.5 pb-2.5 pt-4 w-full text-sm text-gray-900 bg-transparent rounded-lg border appearance-none
+                  ${
+                    errors.username
+                      ? 'border-red-600 focus:border-red-600'
+                      : 'border-gray-200'
+                  }  focus:outline-none focus:ring-0  peer`}
+                  placeholder=" "
+                />
+                <label
+                  htmlFor="username"
+                  className={`absolute text-sm ${
+                    errors.username ? 'text-red-500' : 'text-gray-500'
+                  } duration-300 transform -translate-y-4 scale-75 top-2 z-10 origin-[0] bg-white px-2 peer-focus:px-2 peer-placeholder-shown:scale-100 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:top-1/2 peer-focus:top-2 peer-focus:scale-75 peer-focus:-translate-y-4 left-1`}
+                >
+                  Username
+                </label>
+              </div>
+              {errors.username && (
+                <p className="mt-2 text-xs text-red-600 dark:text-red-400">
+                  <span className="font-medium">Oh, snapp!</span>{' '}
+                  {errors.username}
+                </p>
+              )}
             </div>
+
             <div className="mb-2">
-              <input
-                type="password"
-                className={`w-full p-2 transition duration-200 border border-gray-300 rounded outline-none bg-gray-50 focus:bg-white hover:bg-white ${
-                  errors.password && 'border-red-500'
-                }`}
-                onChange={handleChange}
-                value={formState.password}
-                name="password"
-                placeholder="Password"
-              />
-              <small className="text-red-600 font-medim">
-                {errors.password}
-              </small>
+              <div className="relative">
+                <input
+                  type="password"
+                  value={formState.password}
+                  onChange={handleChange}
+                  name="password"
+                  id="password"
+                  className={`block px-2.5 pb-2.5 pt-4 w-full text-sm text-gray-900 bg-transparent rounded-lg border appearance-none
+                  ${
+                    errors.password
+                      ? 'border-red-600 focus:border-red-600'
+                      : 'border-gray-200'
+                  }  focus:outline-none focus:ring-0  peer`}
+                  placeholder=" "
+                />
+                <label
+                  htmlFor="password"
+                  className={`absolute text-sm ${
+                    errors.password ? 'text-red-500' : 'text-gray-500'
+                  } duration-300 transform -translate-y-4 scale-75 top-2 z-10 origin-[0] bg-white px-2 peer-focus:px-2 peer-placeholder-shown:scale-100 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:top-1/2 peer-focus:top-2 peer-focus:scale-75 peer-focus:-translate-y-4 left-1`}
+                >
+                  Password
+                </label>
+              </div>
+              {errors.password && (
+                <p className="mt-2 text-xs text-red-600 dark:text-red-400">
+                  <span className="font-medium">Oh, snapp!</span>{' '}
+                  {errors.password}
+                </p>
+              )}
             </div>
 
             <button

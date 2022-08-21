@@ -8,6 +8,8 @@ import {
   createHttpLink,
 } from '@apollo/client';
 import { setContext } from '@apollo/client/link/context';
+
+import { AuthProvider } from './context';
 import './index.css';
 import App from './App';
 
@@ -19,7 +21,7 @@ const authLink = setContext((_, { headers }) => {
   // get the authentication token from local storage if it exists
   let token;
   if (localStorage.getItem('token')) {
-    token = JSON.parse(localStorage.getItem('token')!);
+    token = localStorage.getItem('token');
   }
   // return the headers to the context so httpLink can read them
   return {
@@ -52,10 +54,12 @@ const root = ReactDOM.createRoot(
 );
 root.render(
   <React.StrictMode>
-    <ApolloProvider client={client}>
-      <BrowserRouter>
-        <App />
-      </BrowserRouter>
-    </ApolloProvider>
+    <AuthProvider>
+      <ApolloProvider client={client}>
+        <BrowserRouter>
+          <App />
+        </BrowserRouter>
+      </ApolloProvider>
+    </AuthProvider>
   </React.StrictMode>
 );
