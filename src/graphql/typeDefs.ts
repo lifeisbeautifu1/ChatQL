@@ -9,6 +9,7 @@ const typeDefs = gql`
     updated_at: String!
     image_url: String
     token: String
+    latest_message: Message
   }
   type Message {
     id: ID!
@@ -19,6 +20,7 @@ const typeDefs = gql`
   }
   type Query {
     getUsers: [User]!
+    getMe: User!
     getMessages(to: String!): [Message]!
     login(username: String!, password: String!): User!
   }

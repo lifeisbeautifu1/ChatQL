@@ -16,7 +16,25 @@ import {
 import { auth } from '../config/auth';
 
 const resolvers = {
+  User: {
+    latest_message: async (parent: any, args: null, context: AppContext) => {
+      const { username }: any = auth(context);
+      const message = await context.db.query(
+        'SELECT * FROM messages WHERE from_user IN ($1, $2) AND to_user IN ($1, $2) ORDER BY created_at DESC;',
+        [username, parent.username]
+      );
+      return message.rows[0];
+    },
+  },
   Query: {
+    getMe: async (parent: undefined, args: null, context: AppContext) => {
+      const user: any = auth(context);
+      return (
+        await context.db.query('SELECT * FROM users WHERE username = $1', [
+          user.username,
+        ])
+      ).rows[0];
+    },
     getUsers: async (parent: undefined, args: null, context: AppContext) => {
       const user: any = auth(context);
       return (
@@ -42,7 +60,7 @@ const resolvers = {
       }
 
       const messages = await context.db.query(
-        'SELECT * FROM messages WHERE from_user IN ($1, $2) AND to_user IN ($1, $2);',
+        'SELECT * FROM messages WHERE from_user IN ($1, $2) AND to_user IN ($1, $2) ORDER BY created_at DESC;',
         [username, args.to]
       );
 
@@ -71,7 +89,7 @@ const resolvers = {
         if (Object.keys(errors).length > 0) throw errors;
 
         const token = jwt.sign({ username }, process.env.JWT_SECRET as string, {
-          expiresIn: '7d',
+          expiresIn: '1h',
         });
 
         return {
@@ -149,7 +167,7 @@ const resolvers = {
         );
 
         const token = jwt.sign({ username }, process.env.JWT_SECRET as string, {
-          expiresIn: '7d',
+          expiresIn: '1h',
         });
 
         return {
