@@ -33,6 +33,9 @@ const typeDefs = gql`
     ): User!
     sendMessage(content: String!, to: String!): Message!
   }
+  type Subscription {
+    newMessage: Message!
+  }
 `;
 
 export default typeDefs;

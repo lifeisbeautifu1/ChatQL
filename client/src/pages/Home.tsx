@@ -1,7 +1,14 @@
-import { useQuery, gql, useLazyQuery } from '@apollo/client';
-import { useEffect, useState } from 'react';
+import {
+  useQuery,
+  gql,
+  useLazyQuery,
+  useMutation,
+  useSubscription,
+} from '@apollo/client';
+import React, { useEffect, useState } from 'react';
 
 import { Navbar, Message } from '../components';
+import { useAuthState } from '../context';
 import { IMessage, User } from '../interfaces';
 
 const GET_USERS = gql`
@@ -12,8 +19,18 @@ const GET_USERS = gql`
       image_url
       latest_message {
         content
-        created_at
       }
+    }
+  }
+`;
+
+const SEND_MESSAGE = gql`
+  mutation sendMessage($content: String!, $to: String!) {
+    sendMessage(content: $content, to: $to) {
+      id
+      content
+      from_user
+      to_user
     }
   }
 `;
@@ -25,14 +42,61 @@ const GET_MESSAGES = gql`
       content
       from_user
       to_user
-      created_at
+    }
+  }
+`;
+
+const NEW_MESSAGE = gql`
+  subscription newMessage {
+    newMessage {
+      content
+      from_user
+      to_user
     }
   }
 `;
 
 const Home = () => {
   const [darkMode, setDarkMode] = useState(false);
+  const [content, setContent] = useState('');
+  const { user } = useAuthState();
   const [selectedUser, setSelectedUser] = useState<null | User>(null);
+  const { data: messageData, error: messageError } = useSubscription(
+    NEW_MESSAGE,
+    {
+      onSubscriptionData: ({ client, subscriptionData }) => {
+        if (
+          subscriptionData.data.newMessage.to_user === user?.username &&
+          selectedUser?.username === subscriptionData.data.newMessage.from_user
+        ) {
+          console.log('update cache');
+          const { getMessages } = client.cache.readQuery({
+            query: GET_MESSAGES,
+            variables: {
+              to: selectedUser?.username,
+            },
+          })!;
+          client.cache.writeQuery({
+            query: GET_MESSAGES,
+            data: {
+              getMessages: [subscriptionData.data.newMessage, ...getMessages],
+            },
+            variables: {
+              to: selectedUser?.username,
+            },
+          });
+        } else {
+          console.log('not my message!');
+        }
+      },
+    }
+  );
+
+  useEffect(() => {
+    if (messageError) console.log(messageError);
+    if (messageData) console.log(messageData);
+  }, [messageData, messageError]);
+
   const { data } = useQuery(GET_USERS, {
     onCompleted: (data) => {
       console.log(data);
@@ -56,6 +120,71 @@ const Home = () => {
       });
     }
   }, [selectedUser, fetchMessages]);
+
+  const [sendMessage] = useMutation(SEND_MESSAGE, {
+    onCompleted: (data) => {
+      console.log(data);
+    },
+    onError: (error) => {
+      console.log(error);
+    },
+    update: (cache: any, { data }) => {
+      const { getMessages } = cache.readQuery({
+        query: GET_MESSAGES,
+        variables: {
+          to: selectedUser?.username,
+        },
+      });
+      cache.writeQuery({
+        query: GET_MESSAGES,
+        data: {
+          getMessages: [data.sendMessage, ...getMessages],
+        },
+        variables: {
+          to: selectedUser?.username,
+        },
+      });
+
+      const { getUsers } = cache.readQuery({
+        query: GET_USERS,
+      });
+      const updatedUsers = getUsers.map((u: User) =>
+        u.username === selectedUser?.username
+          ? { ...selectedUser, latest_message: data.sendMessage }
+          : u
+      );
+      cache.writeQuery({
+        query: GET_USERS,
+        data: {
+          getUsers: updatedUsers,
+        },
+      });
+      setSelectedUser({
+        ...selectedUser!,
+        latest_message: data.sendMessage,
+      });
+    },
+    // refetchQueries: [
+    //   {
+    //     query: GET_MESSAGES,
+    //     variables: {
+    //       to: selectedUser?.username,
+    //     },
+    //   },
+    // ],
+  });
+
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!content.trim() || !selectedUser) return;
+    sendMessage({
+      variables: {
+        to: selectedUser.username,
+        content,
+      },
+    });
+    setContent('');
+  };
   return (
     <div className={`${darkMode && 'dark'} h-full`}>
       <Navbar darkMode={darkMode} setDarkMode={setDarkMode} />
@@ -120,11 +249,22 @@ const Home = () => {
                   );
                 })}
               </div>
-              <div className="p-4 h-full w-full flex flex-col-reverse overflow-y-scroll scroll-none">
-                {messages &&
-                  messages?.getMessages?.map((m: IMessage) => (
-                    <Message key={m.id} message={m} />
-                  ))}
+              <div className="p-4 h-full w-full flex flex-col">
+                <div className="flex flex-col-reverse overflow-y-scroll scroll-none h-full">
+                  {messages &&
+                    messages?.getMessages?.map((m: IMessage) => (
+                      <Message key={m.id} message={m} />
+                    ))}
+                </div>
+                <form className="" onSubmit={handleSubmit}>
+                  <input
+                    type="text"
+                    value={content}
+                    onChange={(e) => setContent(e.target.value)}
+                    className="w-full border border-gray-100 dark:border-gray-600 rounded-3xl py-2 px-3 dark:bg-gray-600"
+                    placeholder="Send message..."
+                  />
+                </form>
               </div>
             </div>
           </div>

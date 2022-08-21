@@ -33,7 +33,7 @@ const Register = () => {
   const [login] = useLazyQuery(LOGIN_USER, {
     onCompleted: (data) => {
       dispatch({ type: 'LOGIN', payload: data.login });
-      navigate('/');
+      window.location.href = '/';
     },
     onError: (err: any) => {
       console.log(err);

@@ -1,6 +1,9 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import { UserInputError } from 'apollo-server';
+import { UserInputError, AuthenticationError } from 'apollo-server';
+import { PubSub } from 'graphql-subscriptions';
+import { withFilter } from 'graphql-subscriptions';
+const pubsub = new PubSub();
 
 import {
   AppContext,
@@ -107,7 +110,7 @@ const resolvers = {
     sendMessage: async (
       parent: undefined,
       args: SendMessageInput,
-      context: AppContext
+      context: any
     ) => {
       const user: any = auth(context);
       const otherUser = await context.db.query(
@@ -123,6 +126,7 @@ const resolvers = {
         'INSERT INTO messages (content, from_user, to_user) VALUES ($1, $2, $3) returning *;',
         [args.content, user.username, args.to]
       );
+      pubsub.publish('NEW_MESSAGE', { newMessage: message.rows[0] });
       return message.rows[0];
     },
     register: async (
@@ -179,6 +183,18 @@ const resolvers = {
           errors,
         });
       }
+    },
+  },
+  Subscription: {
+    newMessage: {
+      subscribe: withFilter(
+        () => {
+          return pubsub.asyncIterator(['NEW_MESSAGE']);
+        },
+        () => {
+          return true;
+        }
+      ),
     },
   },
 };
