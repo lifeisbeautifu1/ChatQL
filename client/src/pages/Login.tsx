@@ -4,7 +4,7 @@ import { useLazyQuery } from '@apollo/client';
 import { gql } from '@apollo/client';
 
 
-import { useAuthDispatch } from '../context';
+import { useAuthDispatch, useAuthState } from '../context';
 
 export const LOGIN_USER = gql`
   query login($username: String!, $password: String!) {
@@ -20,6 +20,9 @@ export const LOGIN_USER = gql`
 const Register = () => {
   const navigate = useNavigate();
   const dispatch = useAuthDispatch();
+
+  const { authenticated } = useAuthState();
+  if (authenticated) navigate('/');
 
   const [formState, setFormState] = useState({
     username: '',

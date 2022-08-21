@@ -3,6 +3,9 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useMutation } from '@apollo/client';
 import { gql } from '@apollo/client';
 
+
+import { useAuthState } from '../context';
+
 export const REGISTER_USER = gql`
   mutation register(
     $username: String!
@@ -26,6 +29,9 @@ export const REGISTER_USER = gql`
 
 const Register = () => {
   const navigate = useNavigate();
+
+  const { authenticated } = useAuthState();
+  if (authenticated) navigate('/');
 
   const [formState, setFormState] = useState({
     username: '',

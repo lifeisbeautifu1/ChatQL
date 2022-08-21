@@ -54,12 +54,12 @@ const root = ReactDOM.createRoot(
 );
 root.render(
   <React.StrictMode>
-    <AuthProvider>
-      <ApolloProvider client={client}>
-        <BrowserRouter>
+    <ApolloProvider client={client}>
+      <BrowserRouter>
+        <AuthProvider>
           <App />
-        </BrowserRouter>
-      </ApolloProvider>
-    </AuthProvider>
+        </AuthProvider>
+      </BrowserRouter>
+    </ApolloProvider>
   </React.StrictMode>
 );
